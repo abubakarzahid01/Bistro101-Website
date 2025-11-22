@@ -3,6 +3,15 @@ const mongoose = require('mongoose');
 // Define order structure
 const orderSchema = new mongoose.Schema({
 
+  
+orderNumber: {
+  type: Number,
+  required: true,
+  unique: true,
+  default: () => Math.floor(100000 + Math.random() * 900000)   // 6-digit random number
+},
+
+
   customerName: {
     type: String,
     required: true,
