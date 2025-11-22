@@ -3198,6 +3198,12 @@ body.page-transitioning {
     background: #f8f9fa;
 }
 
+.why-choose .why-title .highlight {
+    color: #000;     
+    font-weight: 700; 
+}
+
+
 .why-container {
     max-width: 1200px;
     margin: 0 auto;
