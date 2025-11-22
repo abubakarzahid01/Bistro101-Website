@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews - Restaurant Admin</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Modern Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+<div class="admin-wrapper">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
+            <h2>Restaurant Admin</h2>
+            <p>Management Dashboard</p>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="dashboard.html" class="nav-item">
+                <i class="fa-solid fa-chart-line nav-icon"></i><span>Dashboard</span>
+            </a>
+            <a href="orders.html" class="nav-item">
+                <i class="fa-solid fa-cart-shopping nav-icon"></i><span>Orders</span>
+            </a>
+            <a href="users.html" class="nav-item">
+                <i class="fa-solid fa-users nav-icon"></i><span>Users</span>
+            </a>
+            <a href="bookings.html" class="nav-item">
+                <i class="fa-solid fa-calendar-check nav-icon"></i><span>Bookings</span>
+            </a>
+            <a href="reviews.html" class="nav-item active">
+                <i class="fa-solid fa-star nav-icon"></i><span>Reviews</span>
+            </a>
+            <a href="newsletter.html" class="nav-item">
+                <i class="fa-solid fa-envelope-open-text nav-icon"></i><span>Newsletter</span>
+            </a>
+        </nav>
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <div class="top-header">
+            <h1 class="page-title">Reviews Management</h1>
+
+            <div class="admin-info">
+                <div class="admin-avatar">A</div>
+                <div class="admin-details">
+                    <h4>Admin</h4>
+                    <p>Administrator</p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- REVIEWS TABLE -->
+        <div class="content-card">
+            <div class="card-top">
+                <h2>
+                    <i class="fa-solid fa-comments section-emoji"></i>
+                    Customer Reviews
+                </h2>
+                <button class="refresh-button" onclick="loadReviews()">Refresh</button>
+            </div>
+
+            <div id="reviews-data"></div>
+        </div>
+
+    </main>
+
+</div>
+
+
+
+<script>
+
+const API_URL = "http://localhost:5000/api";
+
+// Load reviews
+async function loadReviews() {
+
+    const box = document.getElementById("reviews-data");
+
+    box.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading reviews...</p>
+        </div>
+    `;
+
+    try {
+
+        const res = await fetch(`${API_URL}/reviews`);
+        const data = await res.json();
+
+        if (!data.success || !data.reviews.length) {
+            box.innerHTML = `
+                <div class="empty-box">
+                    <div class="empty-icon"><i class="fa-solid fa-face-frown"></i></div>
+                    <p>No reviews found</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Email</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.reviews.forEach(r => {
+
+            let stars = "★".repeat(r.rating);
+
+            html += `
+                <tr>
+                    <td>${r.customerName}</td>
+                    <td>${r.email}</td>
+                    <td>${stars} (${r.rating}/5)</td>
+                    <td>${r.comment}</td>
+                    <td>${new Date(r.date).toLocaleDateString()}</td>
+
+                    <td>
+
+                        <!-- EDIT -->
+                        <button class="table-btn edit"
+                                onclick="editReview('${r._id}', '${r.rating}', \`${r.comment}\`)">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <!-- DELETE -->
+                        <button class="table-btn delete"
+                                onclick="deleteReview('${r._id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += "</tbody></table>";
+        box.innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        box.innerHTML = `<div class="empty-box"><p>Error loading reviews</p></div>`;
+    }
+}
+
+
+// DELETE review
+async function deleteReview(id) {
+
+    if (!confirm("Delete this review?")) return;
+
+    const res = await fetch(`${API_URL}/reviews/${id}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Review deleted");
+        loadReviews();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+
+// EDIT review
+function editReview(id, rating, comment) {
+
+    const newRating = prompt("Update rating (1-5):", rating);
+    if (!newRating) return;
+
+    const newComment = prompt("Update comment:", comment);
+    if (newComment === null) return;
+
+    updateReview(id, newRating, newComment);
+}
+
+
+// Save the edited review
+async function updateReview(id, rating, comment) {
+
+    try {
+        const res = await fetch(`${API_URL}/reviews/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ rating, comment })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert("Review updated!");
+            loadReviews();
+        } else {
+            alert("Failed to update review");
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Server error");
+    }
+}
+
+window.onload = loadReviews;
+
+</script>
+
+
+<style>
+.table-btn {
+    padding: 6px 8px;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    color: white;
+}
+
+.table-btn.edit {
+    background: #007bff;
+}
+
+.table-btn.delete {
+    background: #ff4444;
+}
+</style>
+
+
+</body>
+</html>

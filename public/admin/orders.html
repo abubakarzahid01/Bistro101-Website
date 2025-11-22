@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - Restaurant Admin</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Modern Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="admin-wrapper">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
+                <h2>Restaurant Admin</h2>
+                <p>Management Dashboard</p>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fa-solid fa-chart-line nav-icon"></i><span>Dashboard</span>
+                </a>
+
+                <a href="orders.html" class="nav-item active">
+                    <i class="fa-solid fa-cart-shopping nav-icon"></i><span>Orders</span>
+                </a>
+
+                <a href="users.html" class="nav-item">
+                    <i class="fa-solid fa-users nav-icon"></i><span>Users</span>
+                </a>
+
+                <a href="bookings.html" class="nav-item">
+                    <i class="fa-solid fa-calendar-check nav-icon"></i><span>Bookings</span>
+                </a>
+
+                <a href="reviews.html" class="nav-item">
+                    <i class="fa-solid fa-star nav-icon"></i><span>Reviews</span>
+                </a>
+
+                <a href="newsletter.html" class="nav-item">
+                    <i class="fa-solid fa-envelope-open-text nav-icon"></i><span>Newsletter</span>
+                </a>
+            </nav>
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- HEADER -->
+            <div class="top-header">
+                <h1 class="page-title">Orders Management</h1>
+
+                <div class="admin-info">
+                    <div class="admin-avatar">A</div>
+                    <div class="admin-details">
+                        <h4>Admin</h4>
+                        <p>Administrator</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDERS TABLE -->
+            <div class="content-card">
+                <div class="card-top">
+                    <h2><i class="fa-solid fa-cart-shopping section-emoji"></i> All Orders</h2>
+                    <button class="refresh-button" onclick="loadOrders()">Refresh</button>
+                </div>
+
+                <div id="orders-data"></div>
+            </div>
+
+        </main>
+    </div>
+
+
+<!-- ✨ EDIT ORDER MODAL -->
+<div id="editModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Edit Order</h2>
+
+        <input id="editName" placeholder="Customer Name">
+        <input id="editEmail" placeholder="Email" disabled>
+        <input id="editPhone" placeholder="Phone">
+        <input id="editAmount" placeholder="Total Amount">
+
+        <select id="editPayment">
+            <option value="Cash">Cash</option>
+            <option value="Card">Card</option>
+            <option value="Online">Online</option>
+        </select>
+
+        <select id="editStatus">
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Preparing">Preparing</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+        </select>
+
+        <div class="modal-buttons">
+            <button class="save-btn" onclick="saveOrder()">Save</button>
+            <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+const API_URL = "http://localhost:5000/api";
+let currentEditId = null;
+
+
+// Load orders
+async function loadOrders() {
+    const container = document.getElementById("orders-data");
+    container.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading orders...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/orders`);
+        const data = await response.json();
+
+        if (!data.success || !data.data || data.data.length === 0) {
+            container.innerHTML = `
+                <div class="empty-box"><div class="empty-icon"><i class="fa-solid fa-box"></i></div>
+                <p>No orders found</p></div>`;
+            return;
+        }
+
+        let html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.data.forEach(order => {
+            html += `
+                <tr>
+                    <td>${order.customerName}</td>
+                    <td>${order.email}</td>
+                    <td>${order.phone}</td>
+                    <td><strong>$${order.totalAmount.toFixed(2)}</strong></td>
+                    <td>${order.paymentMethod}</td>
+
+                    <td>
+    <select class="status-select" data-id="${order._id}" onchange="updateOrderStatus(this)">
+        <option value="Pending" ${order.status === "Pending" ? "selected" : ""}>Pending</option>
+        <option value="Confirmed" ${order.status === "Confirmed" ? "selected" : ""}>Confirmed</option>
+        <option value="Preparing" ${order.status === "Preparing" ? "selected" : ""}>Preparing</option>
+        <option value="Delivered" ${order.status === "Delivered" ? "selected" : ""}>Delivered</option>
+        <option value="Cancelled" ${order.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+    </select>
+</td>
+
+                    <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+
+                    <td>
+                        <button class="table-btn edit"
+                            onclick="openEdit('${order._id}', '${order.customerName}', '${order.email}', '${order.phone}', '${order.totalAmount}', '${order.paymentMethod}', '${order.status}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <button class="table-btn delete" onclick="deleteOrder('${order._id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += "</tbody></table>";
+        container.innerHTML = html;
+
+    } catch (error) {
+        container.innerHTML = `<div class="empty-box"><p>Error loading orders</p></div>`;
+    }
+}
+
+
+
+// OPEN EDIT MODAL
+function openEdit(id, name, email, phone, amount, payment, status) {
+    currentEditId = id;
+
+    document.getElementById("editName").value = name;
+    document.getElementById("editEmail").value = email;
+    document.getElementById("editPhone").value = phone;
+    document.getElementById("editAmount").value = amount;
+    document.getElementById("editPayment").value = payment;
+    document.getElementById("editStatus").value = status;
+
+    document.getElementById("editModal").classList.remove("hidden");
+}
+
+
+
+function closeModal() {
+    document.getElementById("editModal").classList.add("hidden");
+}
+
+
+
+// SAVE ORDER
+async function saveOrder() {
+    const updated = {
+        customerName: document.getElementById("editName").value,
+        phone: document.getElementById("editPhone").value,
+        totalAmount: Number(document.getElementById("editAmount").value),
+        paymentMethod: document.getElementById("editPayment").value,
+        status: document.getElementById("editStatus").value,
+    };
+
+    const response = await fetch(`${API_URL}/orders/${currentEditId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+        alert("Order updated!");
+        closeModal();
+        loadOrders();
+    } else {
+        alert("Update failed");
+    }
+}
+
+
+
+// DELETE ORDER
+async function deleteOrder(id) {
+    if (!confirm("Delete this order?")) return;
+
+    const response = await fetch(`${API_URL}/orders/${id}`, { method: "DELETE" });
+    const data = await response.json();
+
+    if (data.success) {
+        alert("Order deleted");
+        loadOrders();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+async function updateOrderStatus(selectElement) {
+    const orderId = selectElement.dataset.id;
+    const newStatus = selectElement.value;
+
+    try {
+        const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log("Status updated successfully");
+        } else {
+            alert("Failed to update order status");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Server error while updating status");
+    }
+}
+
+
+
+window.onload = loadOrders;
+</script>
+
+
+
+<!-- MODAL STYLES -->
+<style>
+.modal {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    display:flex; justify-content:center; align-items:center;
+}
+.modal.hidden { display:none; }
+
+.modal-content {
+    background:#1e2230; padding:20px; width:350px; border-radius:10px;
+}
+.modal-content input, .modal-content select {
+    width:100%; padding:10px; margin:6px 0; background:#2c3244; border:none; border-radius:5px; color:white;
+}
+.modal-buttons { display:flex; gap:10px; margin-top:10px; }
+.save-btn { background:#2e8bff; padding:10px; border:none; width:100%; border-radius:5px; }
+.cancel-btn { background:#ff4444; padding:10px; border:none; width:100%; border-radius:5px; }
+
+.table-btn { padding:6px; border-radius:6px; border:none; cursor:pointer; color:white; }
+.table-btn.edit { background:#2e8bff; }
+.table-btn.delete { background:#ff4444; }
+</style>
+
+</body>
+</html>

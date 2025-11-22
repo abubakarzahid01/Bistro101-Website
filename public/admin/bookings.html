@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookings • Admin Panel</title>
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<div class="admin-wrapper">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
+            <h2>Restaurant Admin</h2>
+            <p>Management Dashboard</p>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="dashboard.html" class="nav-item">
+                <i class="fa-solid fa-chart-line nav-icon"></i><span>Dashboard</span>
+            </a>
+
+            <a href="orders.html" class="nav-item">
+                <i class="fa-solid fa-cart-shopping nav-icon"></i><span>Orders</span>
+            </a>
+
+            <a href="users.html" class="nav-item">
+                <i class="fa-solid fa-users nav-icon"></i><span>Users</span>
+            </a>
+
+            <a href="bookings.html" class="nav-item active">
+                <i class="fa-solid fa-calendar-check nav-icon"></i><span>Bookings</span>
+            </a>
+
+            <a href="reviews.html" class="nav-item">
+                <i class="fa-solid fa-star nav-icon"></i><span>Reviews</span>
+            </a>
+
+            <a href="newsletter.html" class="nav-item">
+                <i class="fa-solid fa-envelope nav-icon"></i><span>Newsletter</span>
+            </a>
+        </nav>
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <div class="top-header">
+            <h1 class="page-title">Bookings Management</h1>
+            <div class="admin-info">
+                <div class="admin-avatar">A</div>
+                <div class="admin-details">
+                    <h4>Admin</h4>
+                    <p>Administrator</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE CARD -->
+        <div class="content-card">
+
+            <div class="card-top">
+                <h2><i class="fa-solid fa-calendar-days section-emoji"></i> Table Bookings</h2>
+                <button class="refresh-button" onclick="loadBookings()">Refresh</button>
+            </div>
+
+            <div id="bookings-data"></div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+
+<!-- ✨ EDIT BOOKING MODAL -->
+<div id="editModal" class="modal hidden">
+    <div class="modal-content">
+
+        <h2>Edit Booking</h2>
+
+        <input id="bName" placeholder="Name">
+        <input id="bEmail" placeholder="Email" disabled>
+        <input id="bPhone" placeholder="Phone">
+
+        <label>Date</label>
+        <input type="date" id="bDate">
+
+        <label>Time</label>
+        <input type="time" id="bTime">
+
+        <input id="bGuests" placeholder="Guests">
+
+        <textarea id="bRequest" placeholder="Special Requests"></textarea>
+
+        <select id="bStatus">
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+        </select>
+
+        <div class="modal-buttons">
+            <button class="save-btn" onclick="saveBooking()">Save</button>
+            <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        </div>
+
+    </div>
+</div>
+
+
+
+<script>
+const API_URL = window.location.origin + "/api";
+let currentId = null;
+
+
+// Load bookings
+async function loadBookings() {
+
+    const box = document.getElementById("bookings-data");
+    box.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div><p>Loading bookings...</p>
+        </div>
+    `;
+
+    try {
+
+        const res = await fetch(`${API_URL}/reservations`);
+        const data = await res.json();
+
+        if (!data.success || data.data.length === 0) {
+            box.innerHTML = `
+                <div class="empty-box">
+                    <div class="empty-icon"><i class="fa-solid fa-calendar-xmark"></i></div>
+                    <p>No bookings found</p>
+                </div>
+            `;
+            return;
+        }
+
+
+        let html = `
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Guests</th>
+                    <th>Status</th>
+                    <th>Requests</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+        `;
+
+
+        data.data.forEach(b => {
+
+            html += `
+                <tr>
+                    <td>${b.name}</td>
+                    <td>${b.email}</td>
+                    <td>${b.phone}</td>
+                    <td>${new Date(b.date).toLocaleDateString()}</td>
+                    <td>${b.time}</td>
+                    <td>${b.guests}</td>
+
+                    <td>
+    <select class="status-dropdown" onchange="updateStatus('${b._id}', this.value)">
+        <option value="Pending" ${b.status === "Pending" ? "selected" : ""}>Pending</option>
+        <option value="Confirmed" ${b.status === "Confirmed" ? "selected" : ""}>Confirmed</option>
+        <option value="Completed" ${b.status === "Completed" ? "selected" : ""}>Completed</option>
+        <option value="Cancelled" ${b.status === "Cancelled" ? "selected" : ""}>Cancelled</option>
+    </select>
+</td>
+
+
+                    <td>${b.specialRequests || "None"}</td>
+
+                    <td>
+
+                        <button class="table-btn edit"
+                            onclick="openEdit('${b._id}', '${b.name}', '${b.email}', '${b.phone}', '${b.date}', '${b.time}', '${b.guests}', '${b.status}', \`${b.specialRequests || ''}\`)">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+
+                        <button class="table-btn delete" onclick="deleteBooking('${b._id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
+                    </td>
+
+                </tr>
+            `;
+        });
+
+        html += "</tbody></table>";
+        box.innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        box.innerHTML = `<div class="empty-box"><p>Error loading bookings</p></div>`;
+    }
+}
+
+
+
+// OPEN EDIT MODAL
+function openEdit(id, name, email, phone, date, time, guests, status, request) {
+
+    currentId = id;
+
+    document.getElementById("bName").value = name;
+    document.getElementById("bEmail").value = email;
+    document.getElementById("bPhone").value = phone;
+
+    document.getElementById("bDate").value = date.split("T")[0];
+    document.getElementById("bTime").value = time;
+
+    document.getElementById("bGuests").value = guests;
+    document.getElementById("bStatus").value = status;
+
+    document.getElementById("bRequest").value = request;
+
+    document.getElementById("editModal").classList.remove("hidden");
+}
+
+function closeModal() {
+    document.getElementById("editModal").classList.add("hidden");
+}
+
+
+
+// SAVE BOOKING
+async function saveBooking() {
+
+    const body = {
+        name: document.getElementById("bName").value,
+        phone: document.getElementById("bPhone").value,
+        date: document.getElementById("bDate").value,
+        time: document.getElementById("bTime").value,
+        guests: document.getElementById("bGuests").value,
+        status: document.getElementById("bStatus").value,
+        specialRequests: document.getElementById("bRequest").value
+    };
+
+    const res = await fetch(`${API_URL}/reservations/${currentId}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Booking updated!");
+        closeModal();
+        loadBookings();
+    } else {
+        alert("Update failed.");
+    }
+}
+
+
+
+// DELETE BOOKING
+async function deleteBooking(id) {
+
+    if (!confirm("Delete this booking?")) return;
+
+    const res = await fetch(`${API_URL}/reservations/${id}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Booking deleted");
+        loadBookings();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+// UPDATE STATUS ONLY
+async function updateStatus(id, newStatus) {
+
+    const res = await fetch(`${API_URL}/reservations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Status updated!");
+        loadBookings();
+    } else {
+        alert("Status update failed.");
+    }
+}
+
+async function updateStatus(id, newStatus) {
+    const res = await fetch(`${API_URL}/reservations/${id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Status updated!");
+        loadBookings();
+    } else {
+        alert(data.message || "Status update failed.");
+    }
+}
+
+
+
+window.onload = loadBookings;
+</script>
+
+
+
+<!-- SIMPLE MODAL CSS -->
+<style>
+.modal {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    display:flex; justify-content:center; align-items:center;
+}
+.modal.hidden { display:none; }
+
+.modal-content {
+    background:#1e2230; padding:20px; width:360px;
+    border-radius:10px;
+}
+.modal-content input, .modal-content select, .modal-content textarea {
+    width:100%; padding:10px; margin:6px 0;
+    background:#2c3244; border:none; color:white; border-radius:5px;
+}
+.modal-buttons { display:flex; gap:10px; margin-top:10px; }
+.save-btn { background:#2e8bff; padding:10px; border:none; width:100%; border-radius:5px; }
+.cancel-btn { background:#ff4444; padding:10px; border:none; width:100%; border-radius:5px; }
+
+.table-btn { padding:6px; border-radius:6px; border:none; cursor:pointer; color:white; }
+.table-btn.edit { background:#2e8bff; }
+.table-btn.delete { background:#ff4444; }
+</style>
+
+
+
+</body>
+</html>

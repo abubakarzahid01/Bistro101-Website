@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Restaurant Admin</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Modern Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="admin-wrapper">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
+                <h2>Restaurant Admin</h2>
+                <p>Management Dashboard</p>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fa-solid fa-chart-line nav-icon"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="orders.html" class="nav-item">
+                    <i class="fa-solid fa-cart-shopping nav-icon"></i>
+                    <span>Orders</span>
+                </a>
+
+                <a href="users.html" class="nav-item">
+                    <i class="fa-solid fa-users nav-icon"></i>
+                    <span>Users</span>
+                </a>
+
+                <a href="bookings.html" class="nav-item">
+                    <i class="fa-solid fa-calendar-check nav-icon"></i>
+                    <span>Bookings</span>
+                </a>
+
+                <a href="reviews.html" class="nav-item">
+                    <i class="fa-solid fa-star nav-icon"></i>
+                    <span>Reviews</span>
+                </a>
+
+                <a href="newsletter.html" class="nav-item">
+                    <i class="fa-solid fa-envelope nav-icon"></i>
+                    <span>Newsletter</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- TOP HEADER -->
+            <div class="top-header">
+                <h1 class="page-title">Dashboard</h1>
+
+                <div class="admin-info">
+                    <div class="admin-avatar">A</div>
+                    <div class="admin-details">
+                        <h4>Admin</h4>
+                        <p>Administrator</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAT CARDS -->
+            <div class="stats-container">
+
+                <div class="stat-box">
+                    <div class="stat-emoji users">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h2 id="total-users">0</h2>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-emoji orders">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h2 id="total-orders">0</h2>
+                        <p>Total Orders</p>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-emoji bookings">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h2 id="total-bookings">0</h2>
+                        <p>Table Bookings</p>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-emoji revenue">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h2 id="total-revenue">$0</h2>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RECENT ORDERS -->
+            <div class="content-card">
+                <div class="card-top">
+                    <h2>
+                        <i class="fa-solid fa-receipt section-emoji"></i>
+                        Recent Orders
+                    </h2>
+                    <button class="refresh-button" onclick="loadDashboard()">Refresh Data</button>
+                </div>
+
+                <div id="recent-orders"></div>
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+
+        async function loadDashboard() {
+            try {
+                const usersRes = await fetch(`${API_URL}/auth/users`);
+                const usersData = await usersRes.json();
+                document.getElementById('total-users').textContent = usersData.success ? usersData.users.length : 0;
+
+                const ordersRes = await fetch(`${API_URL}/orders`);
+                const ordersData = await ordersRes.json();
+                document.getElementById('total-orders').textContent = ordersData.success ? ordersData.data.length : 0;
+
+                let revenue = 0;
+                if (ordersData.success && ordersData.data) {
+                    revenue = ordersData.data.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+                }
+                document.getElementById('total-revenue').textContent = '$' + revenue.toFixed(2);
+
+                const bookingsRes = await fetch(`${API_URL}/reservations`);
+                const bookingsData = await bookingsRes.json();
+                document.getElementById('total-bookings').textContent = bookingsData.success ? bookingsData.data.length : 0;
+
+                const container = document.getElementById('recent-orders');
+                if (ordersData.success && ordersData.data && ordersData.data.length > 0) {
+                    let html = '<table class="data-table"><thead><tr><th>Customer</th><th>Email</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+                    ordersData.data.slice(0, 5).forEach(order => {
+                        html += `
+                            <tr>
+                                <td>${order.customerName}</td>
+                                <td>${order.email}</td>
+                                <td>$${order.totalAmount.toFixed(2)}</td>
+                                <td><span class="status-badge ${order.status.toLowerCase()}">${order.status}</span></td>
+                                <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="empty-box"><div class="empty-icon">📦</div><p>No recent orders</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('recent-orders').innerHTML = '<div class="empty-box"><p>Error loading data. Please refresh.</p></div>';
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadDashboard);
+        } else {
+            loadDashboard();
+        }
+    </script>
+</body>
+</html>

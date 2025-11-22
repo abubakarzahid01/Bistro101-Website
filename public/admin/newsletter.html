@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newsletter - Restaurant Admin</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Modern Icons -->
+    <link rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+<div class="admin-wrapper">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fa-solid fa-utensils"></i></div>
+            <h2>Restaurant Admin</h2>
+            <p>Management Dashboard</p>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="dashboard.html" class="nav-item">
+                <i class="fa-solid fa-chart-line nav-icon"></i><span>Dashboard</span>
+            </a>
+            <a href="orders.html" class="nav-item">
+                <i class="fa-solid fa-cart-shopping nav-icon"></i><span>Orders</span>
+            </a>
+            <a href="users.html" class="nav-item">
+                <i class="fa-solid fa-users nav-icon"></i><span>Users</span>
+            </a>
+            <a href="bookings.html" class="nav-item">
+                <i class="fa-solid fa-calendar-check nav-icon"></i><span>Bookings</span>
+            </a>
+            <a href="reviews.html" class="nav-item">
+                <i class="fa-solid fa-star nav-icon"></i><span>Reviews</span>
+            </a>
+            <a href="newsletter.html" class="nav-item active">
+                <i class="fa-solid fa-envelope-open-text nav-icon"></i><span>Newsletter</span>
+            </a>
+        </nav>
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <div class="top-header">
+            <h1 class="page-title">Newsletter Management</h1>
+            <div class="admin-info">
+                <div class="admin-avatar">A</div>
+                <div class="admin-details">
+                    <h4>Admin</h4>
+                    <p>Administrator</p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- SUBSCRIBERS TABLE -->
+        <div class="content-card">
+
+            <div class="card-top">
+                <h2>
+                    <i class="fa-solid fa-envelope section-emoji"></i>
+                    Newsletter Subscribers
+                </h2>
+                <button class="refresh-button" onclick="loadSubscribers()">Refresh</button>
+            </div>
+
+            <div id="subscribers-data"></div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+
+<script>
+
+const API_URL = "http://localhost:5000/api";
+
+// Load subscribers
+async function loadSubscribers() {
+
+    const box = document.getElementById("subscribers-data");
+
+    box.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading subscribers...</p>
+        </div>
+    `;
+
+    try {
+
+        const res = await fetch(`${API_URL}/newsletter`);
+        const data = await res.json();
+
+        if (!data.success || data.subscribers.length === 0) {
+            box.innerHTML = `
+                <div class="empty-box">
+                    <div class="empty-icon"><i class="fa-solid fa-envelope"></i></div>
+                    <p>No subscribers found</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Subscribed Date</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.subscribers.forEach(sub => {
+
+            html += `
+                <tr>
+                    <td>${sub.email}</td>
+                    <td>${new Date(sub.dateSubscribed).toLocaleString()}</td>
+
+                    <td>
+                        <button class="table-btn delete"
+                                onclick="deleteSubscriber('${sub._id}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += "</tbody></table>";
+        box.innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        box.innerHTML = `<div class="empty-box"><p>Error loading subscribers</p></div>`;
+    }
+}
+
+
+
+// Delete subscriber
+async function deleteSubscriber(id) {
+
+    if (!confirm("Delete this subscriber?")) return;
+
+    const res = await fetch(`${API_URL}/newsletter/${id}`, {
+        method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Subscriber deleted");
+        loadSubscribers();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+window.onload = loadSubscribers;
+
+</script>
+
+
+<!-- ACTION BUTTON STYLE -->
+<style>
+.table-btn {
+    padding: 6px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+.table-btn.delete {
+    background: #ff4444;
+}
+</style>
+
+
+</body>
+</html>
