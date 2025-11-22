@@ -25,6 +25,11 @@ connectDB();
 // Start Server
 app.listen(PORT, () => {
   console.log(` Server running on port ${PORT}`);
-  console.log(` Admin Panel: http://localhost:${PORT}/admin`);
+
+  // 🚀 IMPORTANT: Don't log localhost in production (Render)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(` Admin Panel: http://localhost:${PORT}/admin`);
+  }
+
   console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
 });
