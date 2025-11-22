@@ -3199,8 +3199,8 @@ body.page-transitioning {
 }
 
 .why-choose .why-title .highlight {
-    color: #000;     
-    font-weight: 700; 
+    color: #333;   
+    font-weight: inherit;  
 }
 
 
