@@ -1,5 +1,5 @@
-// API Configuration - Add this at the very top
-const API_URL = 'http://localhost:5000/api';
+// API Configuration
+const API_URL = "https://bistro101-backend.onrender.com/api";
 // ========================================
 // MODERN NAVIGATION SYSTEM
 // ========================================
